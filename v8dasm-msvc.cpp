@@ -64,7 +64,7 @@ static void readAllBytes(const std::string& file, std::vector<char>& buffer) {
     infile.seekg(0, infile.end);
     size_t length = infile.tellg();
     infile.seekg(0, infile.beg);
-    std::cout << "inputfile length : " << length << std::endl;
+    std::cout << "inputfile length : " << length << '\n';
 
     if (length > 0) {
         buffer.resize(length);
@@ -72,12 +72,25 @@ static void readAllBytes(const std::string& file, std::vector<char>& buffer) {
     }
 }
 
+static bool fileExists(const std::string& fileName) {
+    if (FILE* file = fopen(fileName.c_str(), "r")) {
+        fclose(file);
+        return true;
+    }
+	return false;
+}
+
 int main(int argc, char* argv[]) {
     // Set flags here, flags that affects code generation and seririalzation
     // should be same as the target program. You can add other flags freely
     // because flag hash will be overrided in fixBytecode().
     v8::V8::SetFlagsFromString("--profile-deserialization --no-lazy --no-flush-bytecode --log-all");
-    std::cout << "argc: " << argc << std::endl;
+    std::cout << "COMPILED ON V8 Engine "
+        << V8_MAJOR_VERSION << "."
+        << V8_MINOR_VERSION << "."
+        << V8_BUILD_NUMBER << "."
+        << V8_PATCH_LEVEL << '\n';
+    std::cout << "argc: " << argc << '\n';
 
     v8::V8::InitializeICUDefaultLocation(argv[0]);
     v8::V8::InitializeExternalStartupData(argv[0]);
@@ -90,13 +103,23 @@ int main(int argc, char* argv[]) {
 
     isolate = Isolate::New(p);
     {
-        v8::Isolate::Scope isolate_scope(isolate);
-        v8::HandleScope scope(isolate);
-        auto ctx = v8::Context::New(isolate);
-        Context::Scope context_scope(ctx);
+        if (argc >= 2)
+        {
+	        for (int i = 1; i < argc; ++i)
+	        {
+                v8::Isolate::Scope isolate_scope(isolate);
+                v8::HandleScope scope(isolate);
+                auto ctx = v8::Context::New(isolate);
+                Context::Scope context_scope(ctx);
 
-        std::vector<char> data;
-        readAllBytes(argv[1], data);
-        runBytecode((uint8_t*)data.data(), data.size());
+                std::cout << "FILE: " << argv[i] << "\n";
+                std::vector<char> data;
+                readAllBytes(argv[i], data);
+                runBytecode((uint8_t*)data.data(), data.size());
+	        }
+        } else
+        {
+            std::cout << "Please specify V8 bytecode files" << "\n";
+        }
     }
 }
